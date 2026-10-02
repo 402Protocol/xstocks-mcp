@@ -78,8 +78,11 @@ This is the same every time, and the trade tools enforce it:
    stores it. There is no recovery.
 2. **You** back the key up to durable secret storage (vault / encrypted
    disk / secret manager — never chat, logs, or code).
-3. Reload the key **from that storage** and call `wallet_verify_backup`
-   with the reloaded key + address. It must report `matches: true`.
+3. **You** send the key back to the agent, retrieved fresh from your
+   storage (not copied from the chat above), and the agent calls
+   `wallet_verify_backup` with it + the address. It must report
+   `matches: true`. The agent verifying from its own context proves
+   nothing; you retrieving it cold proves the backup is real.
 4. Only then fund the wallet: a little Ink **ETH** (gas) + **USDC**.
 5. Now she can trade — pass `backupVerified: true`.
 
