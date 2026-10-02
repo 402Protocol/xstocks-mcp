@@ -20,7 +20,7 @@ export function zeroxApiKey(): string {
   const key = (process.env.ZEROX_API_KEY ?? '').trim();
   if (!key) {
     throw new Error(
-      'ZEROX_API_KEY is not set. Get a free 0x API key at https://0x.org ' +
+      'ZEROX_API_KEY is not set. Get a free 0x API key at https://0x.org/products/swap ' +
         '(sign up, open the dashboard, create a key) and then run:\n' +
         '  export ZEROX_API_KEY=your-key-here\n' +
         'before starting the MCP server.',

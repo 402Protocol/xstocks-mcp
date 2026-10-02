@@ -27,7 +27,7 @@ execute through the 0x settlement contract, never through this server.
 ## Prerequisites
 
 - **Node 20+** and `npm`
-- **A free 0x API key** — your human signs up at [0x.org](https://0x.org),
+- **A free 0x API key** — your human signs up at [0x.org](https://0x.org/products/swap),
   opens the dashboard, and creates a key (agents can't sign up for
   accounts — ask your human to grab this). Quotes and swaps are
   authenticated with it.
