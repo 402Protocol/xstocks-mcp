@@ -39,7 +39,7 @@ import {
 } from 'viem';
 import { z } from 'zod';
 import { CHAIN_ID, USDC_ADDRESS, ink } from './constants.js';
-import { zeroxQuote, type ZeroxQuote } from './zerox.js';
+import { zeroxPrice, zeroxQuote, type ZeroxQuote } from './zerox.js';
 
 export const USDG_ADDRESS = getAddress('0xe343167631d89B6Ffc58B88d6b7fB0228795491D');
 export const USDG_DECIMALS = 6;
@@ -163,9 +163,9 @@ function backupRitual() {
   });
 }
 
-/** Price-only read (no taker, no calldata needed). */
+/** Price-only read via the 0x price endpoint (no taker, no calldata needed). */
 async function oxPrice(sellToken: Address, buyToken: Address, sellAmount: bigint) {
-  const q = await zeroxQuote({ sellToken, buyToken, sellAmount });
+  const q = await zeroxPrice({ sellToken, buyToken, sellAmount });
   if (q.liquidityAvailable === false) {
     throw new Error(`No 0x liquidity for ${sellToken} -> ${buyToken}`);
   }

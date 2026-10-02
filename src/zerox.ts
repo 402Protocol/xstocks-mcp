@@ -15,6 +15,8 @@ import { CHAIN_ID } from './constants.js';
 
 const QUOTE_URL = 'https://api.0x.org/swap/allowance-holder/quote';
 
+const PRICE_URL = 'https://api.0x.org/swap/allowance-holder/price';
+
 /** Fail fast with a clear, actionable message when the key is missing. */
 export function zeroxApiKey(): string {
   const key = (process.env.ZEROX_API_KEY ?? '').trim();
@@ -55,12 +57,58 @@ export interface ZeroxQuote extends ZeroxPrice {
   integratorFee?: ZeroxIntegratorFee;
 }
 
+export interface ZeroxPriceOptions {
+  sellToken: Address;
+  buyToken: Address;
+  sellAmount: bigint;
+}
+
+/**
+ * Indicative price read — no taker, no calldata. The 0x v2 price endpoint
+ * does not require a taker, so quotes stay wallet-free.
+ */
+export async function zeroxPrice(opts: ZeroxPriceOptions): Promise<ZeroxPrice> {
+  const apiKey = zeroxApiKey(); // throws before any network if missing
+
+  const params = new URLSearchParams({
+    chainId: String(CHAIN_ID),
+    sellToken: opts.sellToken,
+    buyToken: opts.buyToken,
+    sellAmount: opts.sellAmount.toString(),
+  });
+
+  const res = await fetch(`${PRICE_URL}?${params}`, {
+    headers: {
+      Accept: 'application/json',
+      '0x-version': 'v2',
+      '0x-API-Key': apiKey,
+    },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`0x price failed: HTTP ${res.status} ${body.slice(0, 300)}`);
+  }
+  const data: any = await res.json();
+  if (!data.buyAmount) {
+    throw new Error(
+      `No 0x liquidity for ${opts.sellToken} -> ${opts.buyToken}: ${JSON.stringify(data).slice(0, 200)}`,
+    );
+  }
+  return {
+    buyAmount: data.buyAmount,
+    sellAmount: data.sellAmount,
+    estimatedPriceImpact: data.estimatedPriceImpact,
+    liquidityAvailable: data.liquidityAvailable,
+  };
+}
+
 export interface ZeroxQuoteOptions {
   sellToken: Address;
   buyToken: Address;
   sellAmount: bigint;
-  /** Taker wallet — required for calldata + allowance checks; omit for a price-only read. */
-  taker?: Address;
+  /** Taker wallet — required by the 0x v2 API on every quote call, price or not. */
+  taker: Address;
   slippageBps?: number;
   /** Integrator fee in bps (0-1000). Applied on the stock leg only by the caller. */
   feeBps?: number;
@@ -86,7 +134,7 @@ export async function zeroxQuote(opts: ZeroxQuoteOptions): Promise<ZeroxQuote> {
     sellAmount: opts.sellAmount.toString(),
     slippageBps: String(opts.slippageBps ?? 100),
   });
-  if (opts.taker) params.set('taker', opts.taker);
+  params.set('taker', opts.taker);
   if (feeBps > 0) {
     params.set('swapFeeBps', String(feeBps));
     params.set('swapFeeRecipient', opts.feeRecipient!);
