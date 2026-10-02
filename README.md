@@ -27,8 +27,10 @@ execute through the 0x settlement contract, never through this server.
 ## Prerequisites
 
 - **Node 20+** and `npm`
-- **A free 0x API key** — sign up at [0x.org](https://0x.org), open the
-  dashboard, create a key. Quotes and swaps are authenticated with it.
+- **A free 0x API key** — your human signs up at [0x.org](https://0x.org),
+  opens the dashboard, and creates a key (agents can't sign up for
+  accounts — ask your human to grab this). Quotes and swaps are
+  authenticated with it.
 - **Muse** (or any MCP client)
 
 ## Setup
@@ -71,7 +73,9 @@ the recipient, and the exact fee taken.
 
 ## The wallet ritual
 
-This is the same every time, and the trade tools enforce it:
+`wallet_create` and `wallet_verify_backup` are tools on this MCP server —
+connect the server first, then call them. This is the same every time,
+and the trade tools enforce it:
 
 1. `wallet_create` — she generates her Ink wallet. The private key is
    returned to **you** over the local connection only; the server never
