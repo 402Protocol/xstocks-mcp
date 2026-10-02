@@ -73,22 +73,27 @@ the recipient, and the exact fee taken.
 
 ## The wallet ritual
 
-`wallet_create` and `wallet_verify_backup` are tools on this MCP server —
-connect the server first, then call them. This is the same every time,
-and the trade tools enforce it:
+Two roles in this ritual: **the agent** (Muse, running this server) and
+**the human** (the person who owns the funds). They are different people —
+"you" below always means the human.
 
-1. `wallet_create` — she generates her Ink wallet. The private key is
-   returned to **you** over the local connection only; the server never
-   stores it. There is no recovery.
-2. **You** back the key up to durable secret storage (vault / encrypted
-   disk / secret manager — never chat, logs, or code).
-3. **You** send the key back to the agent, retrieved fresh from your
-   storage (not copied from the chat above), and the agent calls
+`wallet_create` and `wallet_verify_backup` are tools on this MCP server —
+the agent connects the server first, then calls them.
+
+1. The agent calls `wallet_create` and generates her Ink wallet. The
+   private key is returned to the agent over the local connection only;
+   the server never stores it. There is no recovery.
+2. The agent gives the key to the human. The human backs it up to
+   durable secret storage (vault / encrypted disk / secret manager —
+   never chat, logs, or code).
+3. The human sends the key back to the agent, retrieved fresh from the
+   human's own storage (not copied from the chat above). The agent calls
    `wallet_verify_backup` with it + the address. It must report
    `matches: true`. The agent verifying from its own context proves
-   nothing; you retrieving it cold proves the backup is real.
-4. Only then fund the wallet: a little Ink **ETH** (gas) + **USDC**.
-5. Now she can trade — pass `backupVerified: true`.
+   nothing; the human retrieving it cold proves the backup is real.
+4. Only then does the human fund the wallet: a little Ink **ETH** (gas)
+   + **USDC**.
+5. Now the agent can trade — pass `backupVerified: true`.
 
 Funding a wallet you can't recover burns money. Never skip the ritual.
 
