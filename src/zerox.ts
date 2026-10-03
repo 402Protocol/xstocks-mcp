@@ -14,7 +14,6 @@ import { getAddress } from 'viem';
 import { CHAIN_ID } from './constants.js';
 
 const QUOTE_URL = 'https://api.0x.org/swap/allowance-holder/quote';
-
 const PRICE_URL = 'https://api.0x.org/swap/allowance-holder/price';
 
 /** Fail fast with a clear, actionable message when the key is missing. */
@@ -63,6 +62,14 @@ export interface ZeroxPriceOptions {
   sellAmount: bigint;
 }
 
+/** Raw API response interface for the price endpoint */
+interface ZeroxPriceApiResponse {
+  buyAmount: string;
+  sellAmount: string;
+  estimatedPriceImpact?: string | null;
+  liquidityAvailable?: boolean;
+}
+
 /**
  * Indicative price read — no taker, no calldata. The 0x v2 price endpoint
  * does not require a taker, so quotes stay wallet-free.
@@ -89,7 +96,10 @@ export async function zeroxPrice(opts: ZeroxPriceOptions): Promise<ZeroxPrice> {
     const body = await res.text().catch(() => '');
     throw new Error(`0x price failed: HTTP ${res.status} ${body.slice(0, 300)}`);
   }
-  const data: any = await res.json();
+  
+  // ✅ FIX: Replaced 'any' with strict TypeScript interface
+  const data = (await res.json()) as ZeroxPriceApiResponse;
+  
   if (!data.buyAmount) {
     throw new Error(
       `No 0x liquidity for ${opts.sellToken} -> ${opts.buyToken}: ${JSON.stringify(data).slice(0, 200)}`,
@@ -114,6 +124,32 @@ export interface ZeroxQuoteOptions {
   feeBps?: number;
   /** Required when feeBps > 0. */
   feeRecipient?: Address;
+}
+
+/** Raw API response interface for the quote endpoint */
+interface ZeroxQuoteApiResponse {
+  buyAmount: string;
+  sellAmount: string;
+  estimatedPriceImpact?: string | null;
+  liquidityAvailable?: boolean;
+  transaction?: {
+    to: string;
+    data: string;
+    value?: string;
+    gas?: string;
+    gasPrice?: string;
+  };
+  issues?: {
+    allowance?: {
+      spender?: string;
+    };
+  };
+  fees?: {
+    integratorFee?: {
+      amount?: string;
+      token?: string;
+    };
+  };
 }
 
 export async function zeroxQuote(opts: ZeroxQuoteOptions): Promise<ZeroxQuote> {
@@ -152,14 +188,24 @@ export async function zeroxQuote(opts: ZeroxQuoteOptions): Promise<ZeroxQuote> {
     const body = await res.text().catch(() => '');
     throw new Error(`0x quote failed: HTTP ${res.status} ${body.slice(0, 300)}`);
   }
-  const data: any = await res.json();
+  
+  // ✅ FIX: Replaced 'any' with strict TypeScript interface
+  const data = (await res.json()) as ZeroxQuoteApiResponse;
+  
   if (!data.buyAmount) {
     throw new Error(
       `No 0x liquidity for ${opts.sellToken} -> ${opts.buyToken}: ${JSON.stringify(data).slice(0, 200)}`,
     );
   }
-  const tx = data.transaction ?? {};
-  const integrator = data?.fees?.integratorFee ?? {};
+
+  // ✅ FIX: Safe property access to satisfy TypeScript and prevent runtime crashes
+  if (!data.transaction || !data.transaction.to || !data.transaction.data) {
+    throw new Error('0x quote returned invalid or missing transaction data');
+  }
+
+  const tx = data.transaction;
+  const integrator = data.fees?.integratorFee;
+
   return {
     buyAmount: data.buyAmount,
     sellAmount: data.sellAmount,
@@ -172,10 +218,10 @@ export async function zeroxQuote(opts: ZeroxQuoteOptions): Promise<ZeroxQuote> {
       gas: tx.gas,
       gasPrice: tx.gasPrice,
     },
-    allowanceSpender: data?.issues?.allowance?.spender
+    allowanceSpender: data.issues?.allowance?.spender
       ? getAddress(data.issues.allowance.spender)
       : undefined,
-    integratorFee: integrator.amount
+    integratorFee: (integrator?.amount && integrator.token)
       ? { amount: integrator.amount, token: getAddress(integrator.token) }
       : undefined,
   };
